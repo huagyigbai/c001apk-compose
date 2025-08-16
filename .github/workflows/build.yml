@@ -27,10 +27,16 @@ jobs:
           export ANDROID_SDK_ROOT=$HOME/android-sdk
           mkdir -p $ANDROID_SDK_ROOT
           
-          # 下载 cmdline-tools（用于管理 SDK）
+          # 下载并解压 cmdline-tools
           wget https://dl.google.com/android/repository/commandlinetools-linux-10406996_latest.zip -O cmdline-tools.zip
-          unzip -q cmdline-tools.zip -d $ANDROID_SDK_ROOT
-          mv $ANDROID_SDK_ROOT/cmdline-tools $ANDROID_SDK_ROOT/cmdline-tools/latest
+          # 先解压到临时目录
+          unzip -q cmdline-tools.zip -d $ANDROID_SDK_ROOT/tmp
+          # 创建目标目录
+          mkdir -p $ANDROID_SDK_ROOT/cmdline-tools/latest
+          # 移动解压后的文件到目标目录（避免路径冲突）
+          mv $ANDROID_SDK_ROOT/tmp/cmdline-tools/* $ANDROID_SDK_ROOT/cmdline-tools/latest/
+          # 清理临时目录
+          rm -rf $ANDROID_SDK_ROOT/tmp
           
           # 配置国内镜像（阿里云）加速下载
           echo "y" | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager \
@@ -45,7 +51,7 @@ jobs:
           echo "$ANDROID_SDK_ROOT/platform-tools" >> $GITHUB_PATH
 
       - name: 赋予 gradlew 执行权限
-        run: chmod +x ./gradlew  # 关键步骤：添加可执行权限
+        run: chmod +x ./gradlew
 
       - name: 构建 Debug APK
         run: ./gradlew assembleDebug
