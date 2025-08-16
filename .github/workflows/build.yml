@@ -21,30 +21,35 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      - name: 配置 Android SDK（使用国内镜像）
+      - name: 配置 Android SDK（优化版）
         run: |
           # 设置 Android SDK 路径
           export ANDROID_SDK_ROOT=$HOME/android-sdk
           mkdir -p $ANDROID_SDK_ROOT
           
-          # 下载并解压 cmdline-tools
+          # 下载并安装 cmdline-tools
           wget https://dl.google.com/android/repository/commandlinetools-linux-10406996_latest.zip -O cmdline-tools.zip
-          # 先解压到临时目录
-          unzip -q cmdline-tools.zip -d $ANDROID_SDK_ROOT/tmp
-          # 创建目标目录
+          unzip -q cmdline-tools.zip -d $ANDROID_SDK_ROOT
+          # 处理目录结构（避免移动到自身子目录）
+          mv $ANDROID_SDK_ROOT/cmdline-tools $ANDROID_SDK_ROOT/cmdline-tools-temp
           mkdir -p $ANDROID_SDK_ROOT/cmdline-tools/latest
-          # 移动解压后的文件到目标目录（避免路径冲突）
-          mv $ANDROID_SDK_ROOT/tmp/cmdline-tools/* $ANDROID_SDK_ROOT/cmdline-tools/latest/
-          # 清理临时目录
-          rm -rf $ANDROID_SDK_ROOT/tmp
+          mv $ANDROID_SDK_ROOT/cmdline-tools-temp/* $ANDROID_SDK_ROOT/cmdline-tools/latest/
+          rm -rf $ANDROID_SDK_ROOT/cmdline-tools-temp
           
-          # 配置国内镜像（阿里云）加速下载
-          echo "y" | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager \
+          # 明确指定 Linux 系统，避免 OS 检测问题
+          export REPO_OS_OVERRIDE=linux
+          
+          # 安装必要的 SDK 组件（增加详细输出以便调试）
+          $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager \
             --sdk_root=$ANDROID_SDK_ROOT \
             --repository=https://maven.aliyun.com/repository/google \
+            --verbose \
             "platform-tools" \
             "platforms;android-35" \
             "build-tools;35.0.0"
+          
+          # 确认组件安装成功
+          $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --list_installed
           
           # 配置环境变量
           echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
@@ -54,7 +59,7 @@ jobs:
         run: chmod +x ./gradlew
 
       - name: 构建 Debug APK
-        run: ./gradlew assembleDebug
+        run: ./gradlew assembleDebug --stacktrace
         env:
           ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
 
